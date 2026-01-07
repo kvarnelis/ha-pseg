@@ -104,7 +104,7 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
 
     def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
         """Initialize options flow."""
-        self.config_entry = config_entry
+        self._config_entry = config_entry
 
     async def async_step_init(
         self, user_input: dict[str, str] | None = None
@@ -115,8 +115,8 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
         if user_input is not None:
             try:
                 # Get credentials from config entry
-                username = self.config_entry.data.get(CONF_USERNAME)
-                password = self.config_entry.data.get(CONF_PASSWORD)
+                username = self._config_entry.data.get(CONF_USERNAME)
+                password = self._config_entry.data.get(CONF_PASSWORD)
                 url_root = "nj.pseg"  # Hardcoded for NJ PSEG
                 new_cookie = user_input.get(CONF_COOKIE, "")
                 
@@ -128,8 +128,8 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
                     
                     # Update the config entry with the new cookie
                     self.hass.config_entries.async_update_entry(
-                        self.config_entry,
-                        data={**self.config_entry.data, CONF_COOKIE: new_cookie},
+                        self._config_entry,
+                        data={**self._config_entry.data, CONF_COOKIE: new_cookie},
                     )
                     
                     # Clear any persistent notification about expired cookies
@@ -158,8 +158,8 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
                             
                             # Update the config entry
                             self.hass.config_entries.async_update_entry(
-                                self.config_entry,
-                                data={**self.config_entry.data, CONF_COOKIE: cookie_string},
+                                self._config_entry,
+                                data={**self._config_entry.data, CONF_COOKIE: cookie_string},
                             )
                             
                             # Clear any persistent notification about expired cookies
@@ -190,7 +190,7 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
             data_schema=self._get_options_schema(),
             errors=errors,
             description_placeholders={
-                "current_cookie": self.config_entry.data.get(CONF_COOKIE, "")[:50] + "..." if self.config_entry.data.get(CONF_COOKIE) else "None"
+                "current_cookie": self._config_entry.data.get(CONF_COOKIE, "")[:50] + "..." if self._config_entry.data.get(CONF_COOKIE) else "None"
             },
         )
 
