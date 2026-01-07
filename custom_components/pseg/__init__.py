@@ -576,8 +576,12 @@ async def _process_chart_data(hass: HomeAssistant, chart_data: dict[str, Any]) -
                 statistic_id = "psegli:off_peak_usage"  # Use proper format like Opower
             elif "On-Peak" in series_name:
                 statistic_id = "psegli:on_peak_usage"   # Use proper format like Opower
+            elif "Residential Service" in series_name or series_name.startswith("Meter #"):
+                # Residential Service (RS) meters - single rate, no peak distinction
+                statistic_id = "psegli:energy_usage"
             else:
-                continue  # Skip non-peak series
+                _LOGGER.debug("Skipping series '%s' - not a recognized usage series", series_name)
+                continue  # Skip non-usage series (Temperature, Unknown, etc.)
             
             # Prepare statistics data for HA's API
             statistics = []
