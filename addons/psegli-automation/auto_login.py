@@ -241,15 +241,15 @@ class PSEGAutoLogin:
             current_url = self.page.url
             _LOGGER.info(f"📍 Current URL: {current_url}")
             
-            # Step 2: Fill login form
+            # Step 2: Fill login form (Okta identity provider)
             _LOGGER.info("📝 Step 2: Filling login form...")
-            
-            # Wait for form fields
-            await self.page.wait_for_selector('input[name="username"], input[type="email"], input[id="username"]', timeout=10000)
-            await self.page.wait_for_selector('input[name="password"], input[type="password"]', timeout=10000)
-            
-            # Find username field
-            username_field = await self.page.query_selector('input[name="username"], input[type="email"], input[id="username"]')
+
+            # Okta uses 'identifier' for username field
+            # Wait for form fields with Okta-specific selectors
+            await self.page.wait_for_selector('input[name="identifier"], input[name="username"], input[id="idp-discovery-username"], input[id="okta-signin-username"]', timeout=15000)
+
+            # Find username field - Okta typically uses 'identifier' or 'idp-discovery-username'
+            username_field = await self.page.query_selector('input[name="identifier"], input[name="username"], input[id="idp-discovery-username"], input[id="okta-signin-username"]')
             if username_field:
                 await username_field.click()
                 await asyncio.sleep(random.uniform(0.3, 0.6))
@@ -260,9 +260,12 @@ class PSEGAutoLogin:
                 return False
             
             await asyncio.sleep(random.uniform(0.5, 1.0))
-            
-            # Find password field
-            password_field = await self.page.query_selector('input[name="password"], input[type="password"]')
+
+            # Wait for password field - Okta may show it after username or on same page
+            await self.page.wait_for_selector('input[name="credentials.passcode"], input[name="password"], input[type="password"]', timeout=15000)
+
+            # Find password field - Okta uses 'credentials.passcode'
+            password_field = await self.page.query_selector('input[name="credentials.passcode"], input[name="password"], input[type="password"]')
             if password_field:
                 await password_field.click()
                 await asyncio.sleep(random.uniform(0.3, 0.6))
