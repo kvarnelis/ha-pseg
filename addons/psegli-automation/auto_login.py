@@ -225,58 +225,24 @@ class PSEGAutoLogin:
     async def simulate_realistic_browsing(self) -> bool:
         """Simulate realistic browsing pattern to avoid detection."""
         try:
-            _LOGGER.info("🌐 Starting realistic browsing pattern...")
+            _LOGGER.info("🌐 Starting login flow...")
             
             # Set page timeout to be more generous for the entire process
-            self.page.set_default_timeout(30000)  # 30 seconds
+            self.page.set_default_timeout(60000)  # 60 seconds
             
-            # Step 1: Start with Brave search
-            _LOGGER.info("🔍 Step 1: Navigating to Brave search...")
-            await self.page.goto(self.brave_search_url, wait_until='domcontentloaded')
+            # Skip straight to the login page - no need for nj.pseg.com
+            _LOGGER.info("🔑 Step 1: Navigating directly to login page...")
+            await self.page.goto(self.login_page_url, wait_until='domcontentloaded')
             await asyncio.sleep(random.uniform(2.0, 3.0))
             
-            # Simulate reading search results
-            await self.page.mouse.wheel(0, random.randint(200, 500))
-            await asyncio.sleep(random.uniform(1.0, 2.0))
+            _LOGGER.info("✅ Login page loaded")
             
-            _LOGGER.info("✅ Brave search loaded")
+            # Check if we got redirected to the ID provider
+            current_url = self.page.url
+            _LOGGER.info(f"📍 Current URL: {current_url}")
             
-            # Step 2: Navigate to PSEG NJ main site
-            _LOGGER.info("🏠 Step 2: Navigating to PSEG NJ main site...")
-            await self.page.goto(self.pseg_main_url, wait_until='domcontentloaded')
-            # Removed networkidle wait - it causes timeouts
-            await asyncio.sleep(random.uniform(2.0, 3.0))
-            
-            _LOGGER.info("✅ PSEG NJ main site loaded")
-            
-            # Step 3: Find and click login button
-            _LOGGER.info("🔑 Step 3: Looking for login button...")
-            login_button = await self.page.wait_for_selector('#btnLogin', timeout=10000)
-            
-            if not login_button:
-                _LOGGER.error("❌ Login button not found")
-                return False
-            
-            _LOGGER.info("✅ Login button found, clicking...")
-            await login_button.click()
-            
-            # Wait for login page to load
-            try:
-                await self.page.wait_for_url(lambda url: "id.nj.myaccount.pseg.com" in url, timeout=15000)
-                await asyncio.sleep(random.uniform(1.0, 2.0))
-                _LOGGER.info("✅ Login page loaded")
-            except Exception as e:
-                _LOGGER.warning(f"⚠️ Login page navigation wait failed: {e}")
-                # Check current URL and continue if we're already on the right page
-                current_url = self.page.url
-                if "id.nj.myaccount.pseg.com" in current_url or "nj.myaccount.pseg.com" in current_url:
-                    _LOGGER.info(f"✅ Already on login page: {current_url}")
-                else:
-                    _LOGGER.error(f"❌ Not on expected login page: {current_url}")
-                    return False
-            
-            # Step 4: Fill login form
-            _LOGGER.info("📝 Step 4: Filling login form...")
+            # Step 2: Fill login form
+            _LOGGER.info("📝 Step 2: Filling login form...")
             
             # Wait for form fields
             await self.page.wait_for_selector('input[name="username"], input[type="email"], input[id="username"]', timeout=10000)
@@ -341,8 +307,8 @@ class PSEGAutoLogin:
                     _LOGGER.error(f"❌ Failed to reach dashboard: {current_url}")
                     return False
             
-            # Step 5: Navigate to MySmartEnergy
-            _LOGGER.info("⚡ Step 5: Navigating to MySmartEnergy dashboard...")
+            # Step 3: Navigate to MySmartEnergy
+            _LOGGER.info("⚡ Step 3: Navigating to MySmartEnergy dashboard...")
             
             # Wait for the page to settle
             await asyncio.sleep(3.0)
@@ -376,8 +342,8 @@ class PSEGAutoLogin:
             
             _LOGGER.info("✅ MySmartEnergy Dashboard loaded")
             
-            # Step 6: Get cookies from the final dashboard
-            _LOGGER.info("🍪 Step 6: Capturing cookies from final dashboard...")
+            # Step 4: Get cookies from the final dashboard
+            _LOGGER.info("🍪 Step 4: Capturing cookies from final dashboard...")
             
             # Wait a moment for any additional requests to complete
             await asyncio.sleep(3.0)
