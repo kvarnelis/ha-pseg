@@ -258,10 +258,22 @@ class PSEGAutoLogin:
             else:
                 _LOGGER.error("❌ Username field not found")
                 return False
-            
+
             await asyncio.sleep(random.uniform(0.5, 1.0))
 
-            # Wait for password field - Okta may show it after username or on same page
+            # Okta uses two-step login: username -> Next button -> password
+            # Look for and click the Next/Submit button after username
+            _LOGGER.info("🔘 Looking for Next button...")
+            next_button = await self.page.query_selector('input[type="submit"][value="Next"], button[type="submit"], input.button-primary, button.button-primary')
+            if next_button:
+                _LOGGER.info("✅ Next button found, clicking...")
+                await next_button.click()
+                await asyncio.sleep(2.0)  # Wait for password page to load
+            else:
+                _LOGGER.info("ℹ️ No Next button found, assuming single-page login")
+
+            # Wait for password field - Okta shows it after clicking Next
+            _LOGGER.info("🔑 Waiting for password field...")
             await self.page.wait_for_selector('input[name="credentials.passcode"], input[name="password"], input[type="password"]', timeout=15000)
 
             # Find password field - Okta uses 'credentials.passcode'

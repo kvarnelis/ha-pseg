@@ -15,7 +15,7 @@ from auto_login import get_fresh_cookies
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="PSEG Automation", version="1.0.0")
+app = FastAPI(title="PSEG Automation", version="2.3a3")
 
 @app.get("/")
 async def root():
