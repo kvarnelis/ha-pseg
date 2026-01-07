@@ -1,5 +1,5 @@
 name: "PSEG Automation"
-version: "2.3a1"
+version: "2.3a2"
 slug: "psegli-automation"
 description: "Automated login service for PSEG using Playwright"
 arch:

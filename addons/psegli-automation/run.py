@@ -5,7 +5,7 @@ import asyncio
 import logging
 from typing import Dict, Optional
 from fastapi import FastAPI, HTTPException, Form
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import uvicorn
 
@@ -16,6 +16,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="PSEG Automation", version="1.0.0")
+
+@app.get("/")
+async def root():
+    """Redirect to API docs."""
+    return RedirectResponse(url="/docs")
 
 class LoginRequest(BaseModel):
     username: str
