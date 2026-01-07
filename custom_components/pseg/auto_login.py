@@ -8,30 +8,48 @@ from typing import Dict, Optional
 
 logger = logging.getLogger(__name__)
 
+# Try multiple URLs for addon - HAOS uses different networking
+ADDON_URLS = [
+    "http://172.30.32.1:8000",           # HAOS default gateway (most reliable)
+    "http://homeassistant.local:8000",   # HAOS host network
+    "http://localhost:8000",             # Direct (if same container)
+    "http://host.docker.internal:8000",  # Docker for Mac/Windows
+]
+
+# Cache the working URL to avoid repeated probing
+_working_url = None
+
+async def _find_working_url() -> Optional[str]:
+    """Find a working URL for the addon."""
+    global _working_url
+
+    if _working_url:
+        return _working_url
+
+    async with aiohttp.ClientSession() as session:
+        for base_url in ADDON_URLS:
+            try:
+                logger.debug(f"Trying addon URL: {base_url}")
+                async with session.get(f"{base_url}/health", timeout=3) as resp:
+                    if resp.status == 200:
+                        result = await resp.json()
+                        if result.get("status") == "healthy":
+                            logger.info(f"Found working addon URL: {base_url}")
+                            _working_url = base_url
+                            return base_url
+            except Exception as e:
+                logger.debug(f"URL {base_url} failed: {e}")
+                continue
+
+    logger.warning("No working addon URL found")
+    return None
+
 async def check_addon_health() -> bool:
     """Check if the addon is available and healthy."""
     try:
         logger.debug("Checking addon health...")
-        
-        async with aiohttp.ClientSession() as session:
-            # Check if addon is available via direct port access
-            try:
-                async with session.get("http://localhost:8000/health", timeout=5) as resp:
-                    if resp.status == 200:
-                        result = await resp.json()
-                        if result.get("status") == "healthy":
-                            logger.debug("Addon is healthy and available")
-                            return True
-                        else:
-                            logger.debug("Addon responded but status is not healthy")
-                            return False
-                    else:
-                        logger.debug(f"Addon health check failed with status {resp.status}")
-                        return False
-            except Exception as e:
-                logger.debug(f"Addon health check failed: {e}")
-                return False
-                
+        url = await _find_working_url()
+        return url is not None
     except Exception as e:
         logger.debug(f"Error checking addon health: {e}")
         return False
@@ -41,9 +59,14 @@ async def get_manual_cookies() -> Optional[str]:
     try:
         logger.info("Checking for manually saved cookies...")
 
+        base_url = await _find_working_url()
+        if not base_url:
+            logger.warning("Addon not available")
+            return None
+
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                "http://localhost:8000/cookies/get",
+                f"{base_url}/cookies/get",
                 timeout=10
             ) as resp:
                 if resp.status == 200:
@@ -69,7 +92,8 @@ async def get_fresh_cookies(username: str, password: str) -> Optional[str]:
         logger.info("Requesting fresh cookies from PSEG automation addon...")
 
         # First check if addon is healthy
-        if not await check_addon_health():
+        base_url = await _find_working_url()
+        if not base_url:
             logger.warning("Addon not available or unhealthy, cannot get fresh cookies")
             return None
 
@@ -93,7 +117,7 @@ async def get_fresh_cookies(username: str, password: str) -> Optional[str]:
             logger.info("Sending login request to addon with timeout=120s...")
 
             async with session.post(
-                "http://localhost:8000/login",
+                f"{base_url}/login",
                 json=login_data,
                 timeout=120  # Extended timeout to match addon processing time
             ) as resp:
