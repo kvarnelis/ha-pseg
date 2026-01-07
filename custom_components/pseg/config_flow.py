@@ -95,7 +95,7 @@ class PSEGConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema({
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD): str,
-            vol.Required(CONF_URL_ROOT): str,
+            vol.Required(CONF_URL_ROOT, default="nj.pseg"): str,
             vol.Optional(CONF_COOKIE): str,
         })
 
