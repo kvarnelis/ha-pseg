@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -572,6 +573,9 @@ async def _process_chart_data(hass: HomeAssistant, chart_data: dict[str, Any]) -
                 continue
             
             # Determine which statistic this series maps to (using proper format)
+            # Also determine the unit of measurement
+            unit_of_measurement = "kWh"  # Default for electricity
+
             if "Off-Peak" in series_name:
                 statistic_id = "psegli:off_peak_usage"  # Use proper format like Opower
             elif "On-Peak" in series_name:
@@ -579,6 +583,13 @@ async def _process_chart_data(hass: HomeAssistant, chart_data: dict[str, Any]) -
             elif "Residential Service" in series_name or series_name.startswith("Meter #"):
                 # Residential Service (RS) meters - single rate, no peak distinction
                 statistic_id = "psegli:energy_usage"
+            elif "PGBRSGH" in series_name or "Gas" in series_name:
+                # Gas meters - PGBRSGH = PSE&G Basic Residential Service Gas Heating
+                # Extract meter number for unique ID
+                meter_match = re.search(r'(\d+)', series_name)
+                meter_num = meter_match.group(1) if meter_match else "unknown"
+                statistic_id = f"psegli:gas_usage_{meter_num}"
+                unit_of_measurement = "CCF"  # Hundred cubic feet - standard gas unit
             else:
                 _LOGGER.debug("Skipping series '%s' - not a recognized usage series", series_name)
                 continue  # Skip non-usage series (Temperature, Unknown, etc.)
@@ -699,7 +710,7 @@ async def _process_chart_data(hass: HomeAssistant, chart_data: dict[str, Any]) -
                 metadata = {
                     "statistic_id": statistic_id,  # Use proper format
                     "source": "psegli",  # Use domain as source
-                    "unit_of_measurement": "kWh",
+                    "unit_of_measurement": unit_of_measurement,  # kWh for electric, CCF for gas
                     "has_mean": False,
                     "has_sum": True,  # Set to True since we're sending cumulative totals
                     "name": f"PSEG {series_name}",
