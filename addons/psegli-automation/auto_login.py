@@ -37,7 +37,7 @@ class PSEGAutoLogin:
         
         # URLs for the realistic browsing flow
         self.brave_search_url = "https://search.brave.com/search?q=pseg+long+island&source=desktop"
-        self.pseg_main_url = f"https://www.{DOMAIN}.com/"
+        self.pseg_main_url = f"https://{DOMAIN}.com/"
         self.login_page_url = f"https://myaccount.{DOMAIN}.com/user/login"
         self.id_domain = f"https://id.myaccount.{DOMAIN}.com/"
         self.dashboard_url = f"https://myaccount.{DOMAIN}.com/dashboards"
