@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix Okta login form field selectors\n\n- Update username selector to use Okta''s ''identifier'' field name\n- Update password selector to use ''credentials.passcode''\n- Increase field wait timeout to 15s\n- Add CLAUDE.md for project context\n- Add revisions.md to track debugging attempts\n\n🤖 Generated with [Claude Code]\\(https://claude.com/claude-code\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
