@@ -26,7 +26,7 @@ class PSEGAutoLogin:
         """Initialize PSEG auto login."""
         self.email = email
         self.password = password
-        self.headless = True  # Must be headless in addon environment
+        self.headless = True  # Set to True for addon, False for local debugging
         self.playwright = None
         self.browser = None
         self.context = None
@@ -226,20 +226,35 @@ class PSEGAutoLogin:
         """Simulate realistic browsing pattern to avoid detection."""
         try:
             _LOGGER.info("🌐 Starting login flow...")
-            
+
             # Set page timeout to be more generous for the entire process
             self.page.set_default_timeout(60000)  # 60 seconds
-            
-            # Skip straight to the login page - no need for nj.pseg.com
-            _LOGGER.info("🔑 Step 1: Navigating directly to login page...")
-            await self.page.goto(self.login_page_url, wait_until='domcontentloaded')
+
+            # Use MySmartEnergy SSO route to avoid reCAPTCHA on direct Okta login
+            # The SSO link bypasses the captcha by going through SAML
+            _LOGGER.info("🔑 Step 1: Navigating to MySmartEnergy for SSO login...")
+            await self.page.goto("https://mysmartenergy.nj.pseg.com/", wait_until='domcontentloaded')
             await asyncio.sleep(random.uniform(2.0, 3.0))
-            
-            _LOGGER.info("✅ Login page loaded")
-            
-            # Check if we got redirected to the ID provider
+
+            _LOGGER.info("✅ MySmartEnergy page loaded")
             current_url = self.page.url
             _LOGGER.info(f"📍 Current URL: {current_url}")
+
+            # Look for the SSO link "Sign in Via My Account"
+            _LOGGER.info("🔍 Looking for SSO login link...")
+            sso_link = await self.page.query_selector('a[href*="/Saml/okta-prod/SignIn"], a[href*="SignIn"], a:has-text("Sign in Via My Account"), a:has-text("My Account")')
+
+            if sso_link:
+                _LOGGER.info("✅ Found SSO link, clicking...")
+                await sso_link.click()
+                await asyncio.sleep(3.0)
+            else:
+                _LOGGER.warning("⚠️ SSO link not found, trying direct navigation...")
+                await self.page.goto("https://mysmartenergy.nj.pseg.com/Saml/okta-prod/SignIn", wait_until='domcontentloaded')
+                await asyncio.sleep(3.0)
+
+            current_url = self.page.url
+            _LOGGER.info(f"📍 Current URL after SSO: {current_url}")
             
             # Step 2: Fill login form (Okta identity provider)
             _LOGGER.info("📝 Step 2: Filling login form...")
@@ -268,7 +283,35 @@ class PSEGAutoLogin:
             if next_button:
                 _LOGGER.info("✅ Next button found, clicking...")
                 await next_button.click()
-                await asyncio.sleep(2.0)  # Wait for password page to load
+                await asyncio.sleep(3.0)  # Wait for password page to load
+
+                # Log current URL and page state after clicking Next
+                current_url = self.page.url
+                _LOGGER.info(f"📍 URL after Next click: {current_url}")
+
+                # Try to get page content for debugging
+                try:
+                    page_content = await self.page.content()
+                    # Log if there are any error messages visible
+                    if "error" in page_content.lower() or "invalid" in page_content.lower():
+                        _LOGGER.warning("⚠️ Page may contain error messages")
+                    # Try to find visible error text
+                    error_elements = await self.page.query_selector_all('[class*="error"], [class*="alert"], [role="alert"], .o-form-error-container')
+                    for el in error_elements:
+                        error_text = await el.text_content()
+                        if error_text and error_text.strip():
+                            _LOGGER.warning(f"❌ Error on page: {error_text.strip()}")
+                    # Log what input fields exist on the page
+                    inputs = await self.page.query_selector_all('input')
+                    input_info = []
+                    for inp in inputs[:10]:  # Limit to first 10
+                        name = await inp.get_attribute('name') or ''
+                        typ = await inp.get_attribute('type') or ''
+                        inp_id = await inp.get_attribute('id') or ''
+                        input_info.append(f"name={name}, type={typ}, id={inp_id}")
+                    _LOGGER.info(f"📋 Input fields on page: {input_info}")
+                except Exception as e:
+                    _LOGGER.warning(f"Could not inspect page: {e}")
             else:
                 _LOGGER.info("ℹ️ No Next button found, assuming single-page login")
 

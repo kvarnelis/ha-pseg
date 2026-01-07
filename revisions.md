@@ -1,5 +1,39 @@
 # Revisions Log
 
+## 2026-01-07: Manual Cookie Mode (v2.3a5)
+
+### Problem
+reCAPTCHA blocks automated login on ALL PSEG login paths:
+- Direct Okta login at `id.myaccount.pseg.com`
+- SSO/SAML route via `mysmartenergy.nj.pseg.com/Saml/okta-prod/SignIn`
+
+### Analysis
+After clicking the Next button on the Okta login form, the page doesn't advance because reCAPTCHA validation is required. The page shows:
+- URL stays the same after Next click
+- Still shows `identifier` field (username)
+- Error detection shows "Page may contain error messages"
+
+Tested both routes with visible browser - both have reCAPTCHA.
+
+### Solution
+Added manual cookie management to the addon:
+- `GET /cookies` - Web UI to paste cookies manually
+- `POST /cookies` - Save cookies to persistent storage
+- `GET /cookies/get` - API endpoint for integration to retrieve saved cookies
+- Cookies stored in `/data/manual_cookies.json` (persists across restarts)
+
+### How to Use
+1. Go to `http://homeassistant.local:8000/cookies`
+2. Log in to mysmartenergy.nj.pseg.com manually in browser
+3. Copy MM_SID and __RequestVerificationToken from DevTools
+4. Paste into the form and save
+5. Integration can now use `/cookies/get` endpoint
+
+### Result
+Pending - need to test cookie longevity.
+
+---
+
 ## 2026-01-07: Okta Login Form Field Selectors
 
 ### Problem
