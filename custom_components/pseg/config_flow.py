@@ -38,7 +38,7 @@ class PSEGConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # Get credentials from user input
                 username = user_input[CONF_USERNAME]
                 password = user_input[CONF_PASSWORD]
-                url_root = user_input[CONF_URL_ROOT]
+                url_root = "nj.pseg"  # Hardcoded for NJ PSEG
                 cookie = user_input.get(CONF_COOKIE, "")
                 
                 # If no cookie provided, try to get one from the addon
@@ -95,7 +95,6 @@ class PSEGConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return vol.Schema({
             vol.Required(CONF_USERNAME): str,
             vol.Required(CONF_PASSWORD): str,
-            vol.Required(CONF_URL_ROOT, default="nj.pseg"): str,
             vol.Optional(CONF_COOKIE): str,
         })
 
@@ -118,7 +117,7 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
                 # Get credentials from config entry
                 username = self.config_entry.data.get(CONF_USERNAME)
                 password = self.config_entry.data.get(CONF_PASSWORD)
-                url_root = self.config_entry.data.get(CONF_URL_ROOT)
+                url_root = "nj.pseg"  # Hardcoded for NJ PSEG
                 new_cookie = user_input.get(CONF_COOKIE, "")
                 
                 # If user provided a new cookie, validate it
@@ -198,7 +197,6 @@ class PSEGOptionsFlow(config_entries.OptionsFlow):
     def _get_options_schema(self):
         """Return the schema for the options flow."""
         return vol.Schema({
-            vol.Optional(CONF_URL_ROOT): str,
             vol.Optional(CONF_COOKIE, description="Leave empty to attempt automatic refresh via addon"): str,
         })
 
