@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 """
-PSEG Auto Login Addon
+PSEG NJ Auto Login Addon
 Uses realistic browsing pattern to avoid detection and obtain authentication cookies.
 """
-
 import asyncio
 import logging
 import random
 import time
 from typing import Optional, Dict, Any, List
-DOMAIN = "nj.pseg"
 
 from playwright.async_api import async_playwright, Browser, Page, BrowserContext
 
@@ -20,8 +18,9 @@ logging.basicConfig(
 )
 _LOGGER = logging.getLogger(__name__)
 
+
 class PSEGAutoLogin:
-    """PSEG automated login using realistic browsing pattern."""
+    """PSEG NJ automated login using realistic browsing pattern."""
     
     def __init__(self, email: str, password: str):
         """Initialize PSEG auto login."""
@@ -35,15 +34,15 @@ class PSEGAutoLogin:
         self.login_cookies = {}
         self.exceptional_dashboard_data = None
         
-        # URLs for the realistic browsing flow
-        self.brave_search_url = "https://search.brave.com/search?q=pseg+long+island&source=desktop"
-        self.pseg_main_url = f"https://{DOMAIN}.com/"
-        self.login_page_url = f"https://myaccount.{DOMAIN}.com/user/login"
-        self.id_domain = f"https://id.myaccount.{DOMAIN}.com/"
-        self.dashboard_url = f"https://myaccount.{DOMAIN}.com/dashboards"
-        self.exceptional_dashboard = f"https://myaccount.{DOMAIN}.com/dashboards/exceptionaldashboard"
-        self.mysmartenergy_redirect = f"https://myaccount.{DOMAIN}.com/LI/Header/RedirectMDMWidget"
-        self.final_dashboard = f"https://mysmartenergy.{DOMAIN}.com/Dashboard"
+        # URLs for the realistic browsing flow - FIXED FOR NJ
+        self.brave_search_url = "https://search.brave.com/search?q=pseg+new+jersey&source=desktop"
+        self.pseg_main_url = "https://nj.pseg.com/"
+        self.login_page_url = "https://nj.myaccount.pseg.com/user/login"
+        self.id_domain = "https://id.nj.myaccount.pseg.com/"
+        self.dashboard_url = "https://nj.myaccount.pseg.com/dashboards"
+        self.exceptional_dashboard = "https://nj.myaccount.pseg.com/dashboards/exceptionaldashboard"
+        self.mysmartenergy_redirect = "https://nj.myaccount.pseg.com/LI/Header/RedirectMDMWidget"
+        self.final_dashboard = "https://mysmartenergy.nj.pseg.com/Dashboard"
     
     async def setup_browser(self) -> bool:
         """Initialize Playwright browser with stealth options."""
@@ -229,7 +228,7 @@ class PSEGAutoLogin:
             _LOGGER.info("🌐 Starting realistic browsing pattern...")
             
             # Set page timeout to be more generous for the entire process
-            self.page.set_default_timeout(30000)  # 30 seconds instead of 20
+            self.page.set_default_timeout(30000)  # 30 seconds
             
             # Step 1: Start with Brave search
             _LOGGER.info("🔍 Step 1: Navigating to Brave search...")
@@ -242,16 +241,17 @@ class PSEGAutoLogin:
             
             _LOGGER.info("✅ Brave search loaded")
             
-            # Step 2: Navigate to PSEG main site
-            _LOGGER.info("🏠 Step 2: Navigating to PSEG main site...")
+            # Step 2: Navigate to PSEG NJ main site
+            _LOGGER.info("🏠 Step 2: Navigating to PSEG NJ main site...")
             await self.page.goto(self.pseg_main_url, wait_until='domcontentloaded')
-            await self.page.wait_for_load_state('networkidle')
+            # Removed networkidle wait - it causes timeouts
+            await asyncio.sleep(random.uniform(2.0, 3.0))
             
-            _LOGGER.info("✅ PSEG main site loaded")
+            _LOGGER.info("✅ PSEG NJ main site loaded")
             
             # Step 3: Find and click login button
             _LOGGER.info("🔑 Step 3: Looking for login button...")
-            login_button = await self.page.wait_for_selector('#login', timeout=10000)
+            login_button = await self.page.wait_for_selector('#btnLogin', timeout=10000)
             
             if not login_button:
                 _LOGGER.error("❌ Login button not found")
@@ -262,14 +262,14 @@ class PSEGAutoLogin:
             
             # Wait for login page to load
             try:
-                await self.page.wait_for_url(lambda url: "id.myaccount.nj.pseg.com" in url, timeout=15000)
-                await self.page.wait_for_load_state('networkidle')
+                await self.page.wait_for_url(lambda url: "id.nj.myaccount.pseg.com" in url, timeout=15000)
+                await asyncio.sleep(random.uniform(1.0, 2.0))
                 _LOGGER.info("✅ Login page loaded")
             except Exception as e:
                 _LOGGER.warning(f"⚠️ Login page navigation wait failed: {e}")
                 # Check current URL and continue if we're already on the right page
                 current_url = self.page.url
-                if "id.myaccount.nj.pseg.com" in current_url:
+                if "id.nj.myaccount.pseg.com" in current_url or "nj.myaccount.pseg.com" in current_url:
                     _LOGGER.info(f"✅ Already on login page: {current_url}")
                 else:
                     _LOGGER.error(f"❌ Not on expected login page: {current_url}")
@@ -279,32 +279,38 @@ class PSEGAutoLogin:
             _LOGGER.info("📝 Step 4: Filling login form...")
             
             # Wait for form fields
-            await self.page.wait_for_selector('input[name="username"], input[type="email"], input[type="text"]', timeout=10000)
+            await self.page.wait_for_selector('input[name="username"], input[type="email"], input[id="username"]', timeout=10000)
             await self.page.wait_for_selector('input[name="password"], input[type="password"]', timeout=10000)
             
             # Find username field
-            username_field = await self.page.query_selector('input[name="username"], input[type="email"], input[type="text"]')
+            username_field = await self.page.query_selector('input[name="username"], input[type="email"], input[id="username"]')
             if username_field:
                 await username_field.click()
+                await asyncio.sleep(random.uniform(0.3, 0.6))
                 await username_field.fill(self.email)
                 _LOGGER.info("✅ Username entered")
             else:
                 _LOGGER.error("❌ Username field not found")
                 return False
             
+            await asyncio.sleep(random.uniform(0.5, 1.0))
+            
             # Find password field
             password_field = await self.page.query_selector('input[name="password"], input[type="password"]')
             if password_field:
                 await password_field.click()
+                await asyncio.sleep(random.uniform(0.3, 0.6))
                 await password_field.fill(self.password)
                 _LOGGER.info("✅ Password entered")
             else:
                 _LOGGER.error("❌ Password field not found")
                 return False
             
+            await asyncio.sleep(random.uniform(0.5, 1.0))
+            
             # Find and click LOG IN button
             _LOGGER.info("🔘 Looking for LOG IN button...")
-            login_submit_button = await self.page.wait_for_selector('button[type="submit"]:has-text("LOG IN"), button:has-text("LOG IN")', timeout=10000)
+            login_submit_button = await self.page.wait_for_selector('button[type="submit"], input[type="submit"], button:has-text("LOG IN"), button:has-text("Sign In")', timeout=10000)
             
             if not login_submit_button:
                 _LOGGER.error("❌ LOG IN button not found")
@@ -320,107 +326,53 @@ class PSEGAutoLogin:
             
             try:
                 # Wait for redirect to dashboard
-                await self.page.wait_for_url(lambda url: "myaccount.nj.pseg.com/dashboards" in url, timeout=20000)
-                await self.page.wait_for_load_state('networkidle')
+                await self.page.wait_for_url(lambda url: "nj.myaccount.pseg.com/dashboards" in url or "myaccount.pseg.com" in url, timeout=30000)
+                await asyncio.sleep(random.uniform(2.0, 3.0))
                 _LOGGER.info("✅ Dashboard loaded")
             except Exception as e:
                 # Check if we're still on the login page (login failed)
                 current_url = self.page.url
-                if "id.myaccount.nj.pseg.com/oauth2" in current_url:
+                if "id.nj.myaccount.pseg.com" in current_url:
                     _LOGGER.error(f"❌ Login failed - still on login page: {current_url}")
                     return False
+                elif "nj.myaccount.pseg.com" in current_url:
+                    _LOGGER.info(f"✅ On myaccount page: {current_url}")
                 else:
                     _LOGGER.error(f"❌ Failed to reach dashboard: {current_url}")
                     return False
             
-            # Step 5: Wait for exceptional dashboard to load and manually make redirect request
-            _LOGGER.info("⚡ Step 5: Waiting for exceptional dashboard and manually making redirect request...")
+            # Step 5: Navigate to MySmartEnergy
+            _LOGGER.info("⚡ Step 5: Navigating to MySmartEnergy dashboard...")
             
-            # Wait for the exceptional dashboard POST request to complete
-            await asyncio.sleep(3.0)  # Give time for the POST request to complete
+            # Wait for the page to settle
+            await asyncio.sleep(3.0)
             
-            # Scroll to simulate browsing and wait for content to load
-            await self.page.mouse.wheel(0, random.randint(600, 800))
-            await asyncio.sleep(random.uniform(1.0, 2.0))
-            
-            # Add additional wait to ensure page is fully loaded
+            # Try to find and click the MySmartEnergy link, or navigate directly
             try:
-                await self.page.wait_for_load_state('domcontentloaded', timeout=10000)
-            except Exception as e:
-                _LOGGER.warning(f"⚠️ DOM content load wait failed: {e}")
-            
-            # Check if we captured the exceptional dashboard data
-            if not self.exceptional_dashboard_data:
-                _LOGGER.warning("⚠️ Exceptional dashboard data not captured, trying direct navigation...")
-                await self.page.goto(self.mysmartenergy_redirect, wait_until='domcontentloaded')
-            else:
-                _LOGGER.info("✅ Exceptional dashboard data captured, manually making redirect request...")
-                
-                # Manually make the redirect request with the captured headers
-                try:
-                    # Extract the important headers from the exceptional dashboard request
-                    headers = self.exceptional_dashboard_data['headers']
-                    important_headers = {
-                        'accept': headers.get('accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8'),
-                        'accept-language': headers.get('accept-language', 'en-US,en;q=0.5'),
-                        'referer': headers.get('referer', self.exceptional_dashboard),
-                        'sec-fetch-dest': 'document',
-                        'sec-fetch-mode': 'navigate',
-                        'sec-fetch-site': 'same-origin',
-                        'upgrade-insecure-requests': '1'
-                    }
-                    
-                    # Get cookies from context for the request
-                    context_cookies = await self.context.cookies()
-                    cookie_string = '; '.join([f"{cookie['name']}={cookie['value']}" for cookie in context_cookies if cookie['domain'] in ['.nj.pseg.com', '.myaccount.nj.pseg.com']])
-                    
-                    if cookie_string:
-                        important_headers['cookie'] = cookie_string
-                    
-                    _LOGGER.info(f"🔍 Making manual redirect request to {self.mysmartenergy_redirect}")
-                    
-                    # Make the redirect request manually
-                    response = await self.page.request.get(self.mysmartenergy_redirect, headers=important_headers)
-                    
-                    if response.status == 302:
-                        _LOGGER.info("✅ Redirect response received (302)")
-                        # Follow the redirect by getting the final URL
-                        final_url = response.headers.get('location')
-                        if final_url:
-                            _LOGGER.info(f"🔄 Following redirect to: {final_url}")
-                            try:
-                                await self.page.goto(final_url, wait_until='domcontentloaded', timeout=20000)
-                            except Exception as nav_error:
-                                _LOGGER.warning(f"⚠️ Redirect navigation failed: {nav_error}, trying direct navigation...")
-                                await self.page.goto(self.mysmartenergy_redirect, wait_until='domcontentloaded', timeout=20000)
-                        else:
-                            _LOGGER.warning("⚠️ No location header in redirect, trying direct navigation...")
-                            await self.page.goto(self.mysmartenergy_redirect, wait_until='domcontentloaded', timeout=20000)
-                    else:
-                        _LOGGER.warning(f"⚠️ Unexpected response status: {response.status}, trying direct navigation...")
-                        await self.page.goto(self.mysmartenergy_redirect, wait_until='domcontentloaded', timeout=20000)
-                        
-                except Exception as e:
-                    _LOGGER.warning(f"⚠️ Manual redirect failed: {e}, falling back to direct navigation...")
+                # First try to find a link to MySmartEnergy
+                mysmartenergy_link = await self.page.query_selector('a[href*="mysmartenergy"], a:has-text("MySmartEnergy"), a:has-text("Smart Energy")')
+                if mysmartenergy_link:
+                    _LOGGER.info("✅ Found MySmartEnergy link, clicking...")
+                    await mysmartenergy_link.click()
+                    await asyncio.sleep(3.0)
+                else:
+                    # Try the redirect URL
+                    _LOGGER.info("🔄 Trying redirect URL...")
                     await self.page.goto(self.mysmartenergy_redirect, wait_until='domcontentloaded', timeout=20000)
-            
-            # Wait for MySmartEnergy dashboard - use more robust navigation approach
-            try:
-                # First try to wait for the URL change
-                await self.page.wait_for_url(lambda url: "mysmartenergy.nj.pseg.com/Dashboard" in url, timeout=20000)
             except Exception as e:
-                _LOGGER.warning(f"⚠️ URL wait failed: {e}, trying alternative approach...")
-                # Fallback: wait for any navigation to complete and check current URL
-                await self.page.wait_for_load_state('networkidle', timeout=20000)
-                
-                # Check if we're on the right page
+                _LOGGER.warning(f"⚠️ MySmartEnergy link not found, trying direct navigation: {e}")
+                await self.page.goto(self.final_dashboard, wait_until='domcontentloaded', timeout=20000)
+            
+            # Wait for MySmartEnergy dashboard
+            try:
+                await self.page.wait_for_url(lambda url: "mysmartenergy.nj.pseg.com" in url, timeout=20000)
+            except Exception as e:
+                _LOGGER.warning(f"⚠️ URL wait failed: {e}, trying direct navigation...")
                 current_url = self.page.url
-                if "mysmartenergy.nj.pseg.com/Dashboard" not in current_url:
-                    _LOGGER.warning(f"⚠️ Not on expected dashboard, current URL: {current_url}")
-                    # Try to navigate directly if we're not on the right page
+                if "mysmartenergy.nj.pseg.com" not in current_url:
                     await self.page.goto(self.final_dashboard, wait_until='domcontentloaded', timeout=20000)
             
-            await self.page.wait_for_load_state('networkidle', timeout=10000)
+            await asyncio.sleep(3.0)
             
             _LOGGER.info("✅ MySmartEnergy Dashboard loaded")
             
@@ -433,7 +385,7 @@ class PSEGAutoLogin:
             # Get cookies from browser context
             context_cookies = await self.context.cookies()
             for cookie in context_cookies:
-                if cookie['domain'] in ['.nj.pseg.com', '.myaccount.nj.pseg.com', '.mysmartenergy.nj.pseg.com']:
+                if cookie['domain'] in ['.pseg.com', '.nj.pseg.com', 'nj.pseg.com', '.myaccount.pseg.com', 'nj.myaccount.pseg.com', '.mysmartenergy.nj.pseg.com', 'mysmartenergy.nj.pseg.com']:
                     self.login_cookies[cookie['name']] = cookie['value']
                     _LOGGER.info(f"🍪 Context cookie: {cookie['name']} = {cookie['value'][:50]}...")
             
@@ -505,6 +457,7 @@ class PSEGAutoLogin:
         except Exception as e:
             _LOGGER.warning(f"Error during cleanup: {e}")
 
+
 # API Endpoints for Home Assistant integration
 async def get_pseg_cookies(email: str, password: str) -> Optional[str]:
     """
@@ -525,6 +478,7 @@ async def get_pseg_cookies(email: str, password: str) -> Optional[str]:
         _LOGGER.error(f"Failed to get PSEG cookies: {e}")
         return None
 
+
 def get_pseg_cookies_sync(email: str, password: str) -> Optional[str]:
     """
     Synchronous wrapper for get_pseg_cookies.
@@ -541,6 +495,7 @@ def get_pseg_cookies_sync(email: str, password: str) -> Optional[str]:
     except Exception as e:
         _LOGGER.error(f"Failed to get PSEG cookies synchronously: {e}")
         return None
+
 
 # Compatibility wrapper for existing integration
 async def get_fresh_cookies(username: str, password: str) -> Optional[str]:
@@ -562,18 +517,19 @@ async def get_fresh_cookies(username: str, password: str) -> Optional[str]:
         _LOGGER.error(f"Login error: {e}")
         return None
 
+
 # Test function for standalone usage
 async def main():
     """Test function for standalone usage."""
     import argparse
     
-    parser = argparse.ArgumentParser(description='PSEG Auto Login - Home Assistant Addon')
+    parser = argparse.ArgumentParser(description='PSEG NJ Auto Login - Home Assistant Addon')
     parser.add_argument('--email', required=True, help='PSEG account email/username')
     parser.add_argument('--password', required=True, help='PSEG account password')
     
     args = parser.parse_args()
     
-    _LOGGER.info("🚀 Starting PSEG Auto Login - Home Assistant Addon")
+    _LOGGER.info("🚀 Starting PSEG NJ Auto Login - Home Assistant Addon")
     _LOGGER.info(f"📧 Email: {args.email}")
     _LOGGER.info("🔒 Headless mode: True (required for addon environment)")
     
@@ -591,6 +547,7 @@ async def main():
     else:
         _LOGGER.error("❌ FAILED: Could not obtain cookies")
         return 1
+
 
 if __name__ == "__main__":
     exit_code = asyncio.run(main())
