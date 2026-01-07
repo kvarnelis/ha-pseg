@@ -18,7 +18,7 @@ from auto_login import get_fresh_cookies
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-VERSION = "2.3a5"
+VERSION = "2.3a6"
 app = FastAPI(title="PSEG Automation", version=VERSION)
 
 # File to store manual cookies
